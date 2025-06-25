@@ -20,22 +20,27 @@ async def main(address=None, name=None):
         if not address:
             return
 
-    client = BleakClient(address)
-
-    try:
-        await client.connect(pair=True)
-        if client.is_connected:
+    command = ''
+    while command != 'q':
+        try:
+            client = BleakClient(address)
+            await client.connect(pair=True)
+            if client.is_connected:
+                try:
+                    battery_level = await client.read_gatt_char(BATTERY_LEVEL_UUID)
+                    print(f"Battery level: {int(battery_level[0])}%")
+                except BleakError as e:
+                    print(f"Failed to read battery level: {e}")
+            else:
+                print("Failed to connect to device.")
+        except Exception as e:
+            print(f"Connection failed: {e}")
+        finally:
             try:
-                battery_level = await client.read_gatt_char(BATTERY_LEVEL_UUID)
-                print("Battery level: {0}".format("".join(map(chr, battery_level))))
-            except BleakError as e:
-                print(f"Failed to read battery level: {e}")
-            finally:
                 await client.disconnect()
-        else:
-            print("Failed to connect to device.")
-    except Exception as e:
-        print(f"Connection failed: {e}")
+            except Exception as e:
+                print(f"Disconnection error: {e}")
+        command = input("Command (q to quit): ").strip().lower()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get battery level from a BLE device")
